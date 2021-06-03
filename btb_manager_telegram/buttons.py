@@ -274,6 +274,8 @@ def trade_history():
                 m_list = [
                     f"Last **{10 if len(query) > 10 else len(query)}** trades:\n\n"
                 ]
+
+                query.reverse()
                 for trade in query:
                     if trade[4] is None:
                         continue
