@@ -136,6 +136,7 @@ def check_progress():
 
                 # Generate message
                 m_list = ["Current coin amount progress:\n\n"]
+                query.reverse()
                 for coin in query:
                     last_trade_date = datetime.strptime(
                         coin[4], "%Y-%m-%d %H:%M:%S.%f"
