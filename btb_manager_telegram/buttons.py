@@ -218,6 +218,8 @@ def current_ratios():
                         ".", "\."
                     )
                 ]
+
+                query.reverse()
                 for coin in query:
                     m_list.append(
                         f"*{coin[1]}*:\n"
