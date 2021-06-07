@@ -61,14 +61,14 @@ def setup_telegram_constants():
 
 
 def telegram_text_truncator(
-    m_list, padding_chars_head="", padding_chars_tail=""
+        m_list, padding_chars_head="", padding_chars_tail=""
 ) -> List[str]:
     message = [padding_chars_head]
     index = 0
     for mes in m_list:
         if (
-            len(message[index]) + len(mes) + len(padding_chars_tail)
-            <= telegram.constants.MAX_MESSAGE_LENGTH
+                len(message[index]) + len(mes) + len(padding_chars_tail)
+                <= telegram.constants.MAX_MESSAGE_LENGTH
         ):
             message[index] += mes
         else:
@@ -79,28 +79,32 @@ def telegram_text_truncator(
     return message
 
 
-def get_binance_trade_bot_process() -> Optional[psutil.Process]:
+def get_binance_trade_bot_process() -> Optional[List[psutil.Process]]:
     name = "binance_trade_bot"
     is_root_path_absolute = os.path.isabs(settings.ROOT_PATH)
     bot_path = os.path.normpath(settings.ROOT_PATH)
     if not is_root_path_absolute:
         bot_path = os.path.normpath(os.path.join(os.getcwd(), settings.ROOT_PATH))
 
+    procs = []
     for proc in psutil.process_iter():
         try:
             if (
-                name in proc.name() or name in " ".join(proc.cmdline())
+                    name in proc.name() or name in " ".join(proc.cmdline())
             ) and proc.cwd() == bot_path:
-                return proc
+                procs.append(proc)
         except psutil.AccessDenied:
             continue
+    return procs if len(procs) > 0 else None
 
 
 def find_and_kill_binance_trade_bot_process():
     try:
         binance_trade_bot_process = get_binance_trade_bot_process()
-        binance_trade_bot_process.terminate()
-        binance_trade_bot_process.wait()
+        if binance_trade_bot_process:
+            for i, proc in binance_trade_bot_process:
+                proc.terminate()
+                proc.wait()
     except Exception as e:
         logger.info(f"ERROR: {e}")
 
@@ -193,8 +197,8 @@ def update_checker():
             )
 
     if (
-        settings.TG_UPDATE_BROADCASTED_BEFORE is False
-        or settings.BTB_UPDATE_BROADCASTED_BEFORE is False
+            settings.TG_UPDATE_BROADCASTED_BEFORE is False
+            or settings.BTB_UPDATE_BROADCASTED_BEFORE is False
     ):
         sleep(1)
         scheduler.enter(
