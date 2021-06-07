@@ -101,6 +101,7 @@ def get_binance_trade_bot_process() -> Optional[List[psutil.Process]]:
 def find_and_kill_binance_trade_bot_process():
     try:
         binance_trade_bot_process = get_binance_trade_bot_process()
+        logger.info("length : "+ str(len(binance_trade_bot_process)))
         if binance_trade_bot_process:
             for i in binance_trade_bot_process:
                 proc = binance_trade_bot_process[i]
