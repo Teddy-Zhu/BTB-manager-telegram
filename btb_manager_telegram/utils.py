@@ -102,7 +102,8 @@ def find_and_kill_binance_trade_bot_process():
     try:
         binance_trade_bot_process = get_binance_trade_bot_process()
         if binance_trade_bot_process:
-            for i, proc in binance_trade_bot_process:
+            for i in binance_trade_bot_process:
+                proc = binance_trade_bot_process[i]
                 proc.terminate()
                 proc.wait()
     except Exception as e:
