@@ -56,30 +56,37 @@ def current_value():
             # Get balance, current coin price in USD, current coin price in BTC
             try:
                 cur.execute(
-                    f"""SELECT balance, usd_price, btc_price, datetime FROM 'coin_value' WHERE coin_id = '{current_coin}' ORDER BY datetime DESC LIMIT 1;"""
+                    f"""SELECT balance, usd_price, btc_price, datetime
+                        FROM 'coin_value'
+                        WHERE coin_id = '{current_coin}'
+                        ORDER BY datetime DESC LIMIT 1;"""
                 )
                 query = cur.fetchone()
+
                 cur.execute(
-                    f"""SELECT cv.balance, cv.btc_price
+                    """SELECT cv.balance, cv.usd_price
                         FROM coin_value as cv
                         WHERE cv.coin_id = (SELECT th.alt_coin_id FROM trade_history as th WHERE th.datetime > DATETIME ('now', '-1 day') AND th.selling = 0 ORDER BY th.datetime ASC LIMIT 1)
                         AND cv.datetime > (SELECT th.datetime FROM trade_history as th WHERE th.datetime > DATETIME ('now', '-1 day') AND th.selling = 0 ORDER BY th.datetime ASC LIMIT 1)
                         ORDER BY cv.datetime ASC LIMIT 1;"""
                 )
                 query_1_day = cur.fetchone()
+
                 cur.execute(
-                    f"""SELECT cv.balance, cv.btc_price
+                    """SELECT cv.balance, cv.usd_price
                         FROM coin_value as cv
                         WHERE cv.coin_id = (SELECT th.alt_coin_id FROM trade_history as th WHERE th.datetime > DATETIME ('now', '-7 day') AND th.selling = 0 ORDER BY th.datetime ASC LIMIT 1)
                         AND cv.datetime > (SELECT th.datetime FROM trade_history as th WHERE th.datetime > DATETIME ('now', '-7 day') AND th.selling = 0 ORDER BY th.datetime ASC LIMIT 1)
                         ORDER BY cv.datetime ASC LIMIT 1;"""
                 )
                 query_7_day = cur.fetchone()
+
                 if query is None:
                     return [
                         f"❌ No information about *{current_coin}* available in the database\.",
                         "⚠ If you tried using the `Current value` button during a trade please try again after the trade has been completed\.",
                     ]
+
                 balance, usd_price, btc_price, last_update = query
                 if balance is None:
                     balance = 0
@@ -90,26 +97,35 @@ def current_value():
                 last_update = datetime.strptime(last_update, "%Y-%m-%d %H:%M:%S.%f")
 
                 return_rate_1_day, return_rate_7_day = 0, 0
-                balance_1_day, btc_price_1_day, balance_7_day, btc_price_7_day = (
+                balance_1_day, usd_price_1_day, balance_7_day, usd_price_7_day = (
                     0,
                     0,
                     0,
                     0,
                 )
-                if query_1_day is not None and btc_price != 0:
-                    balance_1_day, btc_price_1_day = query_1_day
+
+                if (
+                    query_1_day is not None
+                    and all(elem is not None for elem in query_1_day)
+                    and usd_price != 0
+                ):
+                    balance_1_day, usd_price_1_day = query_1_day
                     return_rate_1_day = round(
-                        (balance * btc_price - balance_1_day * btc_price_1_day)
-                        / (balance_1_day * btc_price_1_day)
+                        (balance * usd_price - balance_1_day * usd_price_1_day)
+                        / (balance_1_day * usd_price_1_day)
                         * 100,
                         2,
                     )
 
-                if query_7_day is not None and btc_price != 0:
-                    balance_7_day, btc_price_7_day = query_7_day
+                if (
+                    query_7_day is not None
+                    and all(elem is not None for elem in query_7_day)
+                    and usd_price != 0
+                ):
+                    balance_7_day, usd_price_7_day = query_7_day
                     return_rate_7_day = round(
-                        (balance * btc_price - balance_7_day * btc_price_7_day)
-                        / (balance_7_day * btc_price_7_day)
+                        (balance * usd_price - balance_7_day * usd_price_7_day)
+                        / (balance_7_day * usd_price_7_day)
                         * 100,
                         2,
                     )
@@ -131,12 +147,13 @@ def current_value():
                     f"*Current coin {current_coin}:*\n"
                     f"\t\- Balance: `{format_float(balance)}` *{current_coin}*\n"
                     f"\t\- Exchange rate purchased: `{format_float(buy_price / alt_amount)}` *{bridge}*/*{current_coin}* \n"
-                    f"\t\- Exchange rate now:           `{format_float(usd_price)}` *USD*/*{current_coin}*\n"
-                    f"\t\- *Change in value*: `{round((balance * usd_price - buy_price) / buy_price * 100, 2)}` *%*\n"
+                    f"\t\- Exchange rate now: `{format_float(usd_price)}` *USD*/*{current_coin}*\n"
+                    f"\t\- Change in value: `{round((balance * usd_price - buy_price) / buy_price * 100, 2)}` *%*\n"
                     f"\t\- Value in *USD*: `{round(balance * usd_price, 2)}` *USD*\n"
                     f"\t\- Value in *BTC*: `{format_float(balance * btc_price)}` *BTC*\n\n"
-                    f"1 day change BTC: `{return_rate_1_day}` %\n"
-                    f"7 days change BTC: `{return_rate_7_day}` %\n"
+                    f"_Bought for_ `{round(buy_price, 2)}` *{bridge}*\n"
+                    f"_*1 day* value change USD_: `{return_rate_1_day}` *%*\n"
+                    f"_*7 days* value change USD_: `{return_rate_7_day}` *%*\n"
                 ]
                 message = telegram_text_truncator(m_list)
                 con.close()
